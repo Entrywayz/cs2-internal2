@@ -15,4 +15,7 @@ namespace hooks {
 	bool SetupCreateMoveHook();
 	bool SetupSkyBoxObjectDrawArray();
 	bool SetupPenetrate();
+	bool SetupItemInLoadout();
+	bool SetupLevelInit();
+	bool SetupFrameStage();
 }

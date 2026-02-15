@@ -1,11 +1,16 @@
-#include "present.h"
+﻿#include "present.h"
 #include "core/globals.h"
 #include "cs2/features/visuals/visuals.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_dx11.h"
 #include "imgui/imgui_impl_win32.h"
 #include "cs2/features/aim/aim.h"
-
+#include "cs2/features/skins/inventory.h"
+#include "cs2/features/skins/skins.h"
+#include "cs2/features/skins/inventory_p.h"
+extern void RenderInventoryWindow();
+extern void RenderSettingsWindow();
+namespace W { void RenderSkinManagerWindow(); }
 PresentFn oPresent = nullptr;
 bool Initialized = false;
 ImFont* mainFont = nullptr;
@@ -14,7 +19,9 @@ WNDPROC oWndProc = nullptr;
 ID3D11Device* pDevice = nullptr;
 ID3D11DeviceContext* pContext = nullptr;
 ID3D11RenderTargetView* mainRenderTargetView = nullptr;
+
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 LRESULT __stdcall WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     if (uMsg == WM_KEYDOWN) {
         if (wParam == VK_INSERT) {
@@ -29,7 +36,7 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     if (globals::showMenu) {
         ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
-        
+
         switch (uMsg) {
         case WM_MOUSEMOVE:
         case WM_LBUTTONDOWN:
@@ -47,6 +54,7 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
     return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
 }
+
 void InitImGui() {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -60,6 +68,7 @@ void InitImGui() {
     ImGui_ImplWin32_Init(window);
     ImGui_ImplDX11_Init(pDevice, pContext);
 }
+
 HRESULT initHkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT flags) {
     if (!Initialized) {
         if (SUCCEEDED(pSwapChain->GetDevice(__uuidof(ID3D11Device), (void**)&pDevice))) {
@@ -73,6 +82,13 @@ HRESULT initHkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT flags)
             pBackBuffer->Release();
             oWndProc = (WNDPROC)SetWindowLongPtr(window, GWLP_WNDPROC, (LONG_PTR)WndProc);
             InitImGui();
+
+            INVENTORY::Dump(); // Собрать данные о предметах
+            InventoryPersistence::LoadAndRecreate("added_items.json"); // Загрузить кастомные скины
+            InventoryPersistence::Equip(); // Надеть те, что были надеты
+
+            Initialized = true;
+
             Initialized = true;
         }
         else {
@@ -86,10 +102,111 @@ double deg2rad(double degrees) {
 }
 
 float skyColorArray[4];
+#include "imgui/imgui.h"
+#include <string>
+#include <vector>
+#include <algorithm>
+
+// Предположим, что эти данные доступны из ваших прошлых файлов:
+// S::m_dumped_items — вектор структур c_dumped_item (результат INVENTORY::Dump())
+// InventoryPersistence — ваш неймспейс для работы с JSON и CEconItem
+
+#include "imgui/imgui.h"
+#include <string>
+#include <algorithm>
+#include <vector>
+
+void RenderInventoryWindow() {
+    static char skinSearch[128] = "";
+
+    // Поле поиска
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputTextWithHint("##search", "Поиск оружия или скина...", skinSearch, IM_ARRAYSIZE(skinSearch));
+
+    ImGui::Spacing();
+
+    // Область со списком
+    if (ImGui::BeginChild("##inventory_scroll", ImVec2(0, 0), true)) {
+
+        std::string filter = skinSearch;
+        std::transform(filter.begin(), filter.end(), filter.begin(), ::tolower);
+
+        // 1. Итерируемся по предметам (оружию)
+        for (auto& item : S::m_dumped_items) {
+
+            // 2. Итерируемся по скинам, которые привязаны к этому оружию
+            for (auto& skin : item.m_dumped_skins) {
+
+                // Преобразуем const char* в std::string для поиска
+                std::string itemName = item.m_name;
+                std::string skinName = skin.m_name;
+
+                std::string combined = itemName + " " + skinName;
+                std::transform(combined.begin(), combined.end(), combined.begin(), ::tolower);
+
+                // Фильтрация поиска
+                if (!filter.empty() && combined.find(filter) == std::string::npos)
+                    continue;
+
+                // Уникальный ID для ImGui (индекс оружия + ID скина)
+                ImGui::PushID(item.m_def_index ^ skin.m_id);
+
+                // Текст в списке: "AK-47 | Vulcan"
+                char label[256];
+                snprintf(label, sizeof(label), "%s | %s", item.m_name, skin.m_name);
+
+                if (ImGui::Selectable(label)) {
+                    // Создаем структуру для записи в JSON
+                    PersistedEconItem rec;
+                    rec.itemID = 0; // Назначится автоматически в LoadAndRecreate
+                    rec.defIndex = item.m_def_index;
+                    rec.paintKit = (float)skin.m_id; // В вашем классе m_id — это PaintKit ID
+                    rec.rarity = skin.m_rarity;
+                    rec.quality = 4; // Genuine/Normal
+                    rec.paintSeed = (float)(rand() % 1000);
+                    rec.paintWear = 0.0001f; // Factory New
+                    rec.legacy = true;
+
+                    // Сохраняем названия для отображения в менеджере
+                    rec.weaponTag = item.m_name;
+                    rec.skinTag = skin.m_name;
+
+                    // Путь к иконке (можете оставить пустым, если не используете картинки в меню)
+                    rec.imagePath = "";
+
+                    // Сохраняем в файл added_items.json
+                    InventoryPersistence::Append(rec, "added_items.json");
+
+                    // Мгновенно обновляем инвентарь в игре
+                    InventoryPersistence::LoadAndRecreate("added_items.json");
+                }
+
+                ImGui::PopID();
+            }
+        }
+        ImGui::EndChild();
+    }
+}
+
 HRESULT hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT flags)
 {
-    if (!Initialized) {
-        initHkPresent(pSwapChain, SyncInterval, flags);
+    if (!Initialized) initHkPresent(pSwapChain, SyncInterval, flags);
+
+    // --- Логика применения скинов (Каждый кадр) ---
+    if (I::engine && I::engine->is_in_game()) {
+        auto pLocalPawn = C_CSPlayerPawn::GetLocalPawn();
+        auto pInventory = CCSPlayerInventory::GetInstance();
+
+        if (pLocalPawn && pInventory) {
+            S::ApplyGloves(); // Применяем перчатки
+            S::ApplyWeaponSkins(pLocalPawn, pInventory, nullptr); // Применяем скины на оружие
+            // S::set_agent(6); // Если нужен чейнджер агентов
+        }
+    }
+    
+    if (ImGui::BeginTabItem("Skins Search")) {
+        RenderInventoryWindow(); // Поиск и добавление новых скинов
+        ImGui::EndTabItem();
     }
 
     globals::g_PenetrationStatus = 0;
@@ -118,13 +235,12 @@ HRESULT hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT flags)
         float radiusInPixels = ImGui::GetIO().DisplaySize.x * 0.5f * tanf(deg2rad(globals::aimbotFov));
 
         drawList->AddCircle(
-            screenCenter,           
+            screenCenter,
             radiusInPixels,
-            IM_COL32(255, 255, 255, 128), 
-            64,                   
-            1.0f                   
+            IM_COL32(255, 255, 255, 128),
+            64,
+            1.0f
         );
-
     }
 
     if (globals::showMenu) {
@@ -136,9 +252,8 @@ HRESULT hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT flags)
                 ImGui::Checkbox("AIM", &globals::aimEnabled);
                 ImGui::SliderFloat("FOV", &globals::aimbotFov, 0.0f, 180.0f);
                 ImGui::Checkbox("BHOP", &globals::bhopEnabled);
-
                 ImGui::EndTabItem();
-            }
+            }   
 
             if (ImGui::BeginTabItem("Anti-Aim")) {
                 ImGui::Checkbox("Enable Anti-Aim", &globals::bAntiAim);
@@ -152,7 +267,6 @@ HRESULT hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT flags)
                     const char* yawTypes[] = { "None", "Backwards", "Forwards" };
                     ImGui::Combo("Yaw Type", &globals::iBaseYawType, yawTypes, IM_ARRAYSIZE(yawTypes));
                 }
-
                 ImGui::EndTabItem();
             }
 

@@ -12,6 +12,67 @@
 #include "cs2/classes/sdk.h"
 #include "core/mem/mem.h"
 
+namespace Mem {
+    class PtrValidator {
+    private:
+        struct CacheEntry {
+            void* base = nullptr;
+            size_t region_size = 0;
+            DWORD state = 0;
+            DWORD protect = 0;
+            DWORD time = 0;
+        };
+
+        static const size_t CACHE_SIZE = 256; // Размер кэша можно настроить
+        static CacheEntry cache[256]; // Используем CACHE_SIZE
+        static DWORD last_check;
+
+        static bool CheckAndCache(void* ptr) {
+            MEMORY_BASIC_INFORMATION mbi;
+            if (VirtualQuery(ptr, &mbi, sizeof(mbi)) == 0)
+                return false;
+
+            size_t index = (reinterpret_cast<uintptr_t>(ptr) >> 12) % CACHE_SIZE;
+            cache[index] = {
+                mbi.BaseAddress,
+                mbi.RegionSize,
+                mbi.State,
+                mbi.Protect,
+                GetTickCount()
+            };
+
+            return (mbi.State == MEM_COMMIT) && ((mbi.Protect & PAGE_NOACCESS) == 0);
+        }
+
+    public:
+        static bool IsValidPtr(void* ptr) {
+            if (!ptr) return false;
+
+            size_t index = (reinterpret_cast<uintptr_t>(ptr) >> 12) % CACHE_SIZE;
+            auto& entry = cache[index];
+
+            DWORD current_time = GetTickCount();
+            if (entry.base &&
+                current_time - entry.time < 1000 &&
+                reinterpret_cast<uintptr_t>(ptr) >= reinterpret_cast<uintptr_t>(entry.base) &&
+                reinterpret_cast<uintptr_t>(ptr) < reinterpret_cast<uintptr_t>(entry.base) + entry.region_size) {
+
+                return (entry.state == MEM_COMMIT) && ((entry.protect & PAGE_NOACCESS) == 0);
+            }
+
+            return CheckAndCache(ptr);
+        }
+
+        // Для отладки/очистки при необходимости
+        static void ClearCache() {
+            memset(cache, 0, sizeof(cache));
+            last_check = 0;
+        }
+    };
+
+
+}
+
 uintptr_t visuals::client = (uintptr_t)(GetModuleHandleA("client.dll"));
 uintptr_t visuals::engine2 = (uintptr_t)(GetModuleHandleA("engine2.dll"));
 

@@ -144,6 +144,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\berserkskins-master\berserk\fnv1a.h" />
     <ClInclude Include="ext\imgui\imconfig.h" />
     <ClInclude Include="ext\imgui\imgui.h" />
     <ClInclude Include="ext\imgui\imgui_impl_dx11.h" />
@@ -168,6 +169,39 @@
     <ClInclude Include="src\core\i_csgo_input.h" />
     <ClInclude Include="src\cs2\features\aim\aim.h" />
     <ClInclude Include="src\cs2\features\antiaim\antiaim.h" />
+    <ClInclude Include="src\cs2\features\skins\json.hpp" />
+    <ClInclude Include="src\cs2\features\skins\skins_menu.h" />
+    <ClInclude Include="src\cs2\interfaces\CCPlayerInventory.h" />
+    <ClInclude Include="src\cs2\interfaces\CEconItem.h" />
+    <ClInclude Include="src\cs2\interfaces\color.hpp" />
+    <ClInclude Include="src\cs2\interfaces\CRT.h" />
+    <ClInclude Include="src\cs2\interfaces\entity.h" />
+    <ClInclude Include="src\cs2\interfaces\enums.h" />
+    <ClInclude Include="src\cs2\interfaces\fnv1a.h" />
+    <ClInclude Include="src\cs2\interfaces\hooks.h" />
+    <ClInclude Include="src\cs2\interfaces\hook_manager.h" />
+    <ClInclude Include="src\cs2\interfaces\interfaces.h" />
+    <ClInclude Include="src\cs2\features\skins\inventory.h" />
+    <ClInclude Include="src\cs2\features\skins\inventory_p.h" />
+    <ClInclude Include="src\cs2\interfaces\i_client.h" />
+    <ClInclude Include="src\cs2\interfaces\i_engine_client.h" />
+    <ClInclude Include="src\cs2\interfaces\i_event_manager.h" />
+    <ClInclude Include="src\cs2\interfaces\i_file_system.h" />
+    <ClInclude Include="src\cs2\interfaces\i_game_resource.h" />
+    <ClInclude Include="src\cs2\interfaces\i_global_vars.h" />
+    <ClInclude Include="src\cs2\interfaces\i_localize.h" />
+    <ClInclude Include="src\cs2\interfaces\i_materialsystem.h" />
+    <ClInclude Include="src\cs2\interfaces\i_panorama.h" />
+    <ClInclude Include="src\cs2\interfaces\i_pvs.h" />
+    <ClInclude Include="src\cs2\interfaces\i_resourcesys.h" />
+    <ClInclude Include="src\cs2\interfaces\i_schema.h" />
+    <ClInclude Include="src\cs2\interfaces\panorama.h" />
+    <ClInclude Include="src\cs2\interfaces\pe64.h" />
+    <ClInclude Include="src\cs2\interfaces\schema.h" />
+    <ClInclude Include="src\cs2\features\skins\skins.h" />
+    <ClInclude Include="src\cs2\interfaces\utlbuffer.h" />
+    <ClInclude Include="src\cs2\interfaces\utlmap.h" />
+    <ClInclude Include="src\cs2\interfaces\utlvector.h" />
     <ClInclude Include="src\cs2\features\visuals\visuals.h" />
     <ClInclude Include="src\cs2\hooks\createmove.h" />
     <ClInclude Include="src\cs2\hooks\hooks.h" />
@@ -194,6 +228,16 @@
     <ClCompile Include="src\core\mem\mem.cpp" />
     <ClCompile Include="src\cs2\features\aim\aim.cpp" />
     <ClCompile Include="src\cs2\features\antiaim\antiaim.cpp" />
+    <ClCompile Include="src\cs2\interfaces\CCPlayerInventory.cpp" />
+    <ClCompile Include="src\cs2\interfaces\CEconItem.cpp" />
+    <ClCompile Include="src\cs2\interfaces\entity.cpp" />
+    <ClCompile Include="src\cs2\interfaces\events.cpp" />
+    <ClCompile Include="src\cs2\interfaces\interfaces.cpp" />
+    <ClCompile Include="src\cs2\features\skins\inventory.cpp" />
+    <ClCompile Include="src\cs2\features\skins\inventory_p.cpp" />
+    <ClCompile Include="src\cs2\interfaces\panorama.cpp" />
+    <ClCompile Include="src\cs2\interfaces\schema.cpp" />
+    <ClCompile Include="src\cs2\features\skins\skins.cpp" />
     <ClCompile Include="src\cs2\features\visuals\visuals.cpp" />
     <ClCompile Include="src\cs2\hooks\createmove.cpp" />
     <ClCompile Include="src\cs2\hooks\hooks.cpp" />
