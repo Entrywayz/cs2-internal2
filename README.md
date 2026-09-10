@@ -1,1 +1,1 @@
-код говно кодер пидор
+shit code mix external and internal
